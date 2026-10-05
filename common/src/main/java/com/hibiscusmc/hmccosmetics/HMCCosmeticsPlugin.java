@@ -89,9 +89,6 @@ public final class HMCCosmeticsPlugin extends HibiscusPlugin {
             saveResource("menus/defaultmenu_hands.yml", false);
             saveResource("menus/defaultmenu_backpacks.yml", false);
         }
-        if (!Path.of(getDataFolder().getPath(), "menus", "cosmenu.yml").toFile().exists()) {
-            saveResource("menus/cosmenu.yml", false);
-        }
         if (!Path.of(getDataFolder().getPath() + "/menus/functional/internal_dye_menu.yml").toFile().exists()) {
             saveResource("menus/functional/internal_dye_menu.yml", false);
         }

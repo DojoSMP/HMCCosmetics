@@ -86,19 +86,3 @@ items:
       any:
         - "[MENU] defaultmenu_balloons"
         - "[SOUND] minecraft:ui.button.click 1 1"
-  dojo_back:
-    slots:
-      - 45
-    item:
-      material: ARROW
-      name: "<aqua><b>Back</b>"
-      lore:
-        - "<gray>Cosmetics Menu"
-        - ""
-        - "<white>กลับไปยังเมนู Cosmetic หลัก"
-        - ""
-        - "<yellow>▶ <b><u>CLICK</u></b><reset> <yellow>เพื่อกลับ"
-    type: empty
-    actions:
-      any:
-        - "[PLAYER-COMMAND] dojocosmetics:cosmetic"
