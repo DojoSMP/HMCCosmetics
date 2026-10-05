@@ -880,6 +880,7 @@ public class CosmeticUser implements CosmeticHolder {
         WORLDGUARD,
         PLUGIN,
         VANISH,
+        DOJO_VANISH,
         POTION,
         ACTION,
         COMMAND,
