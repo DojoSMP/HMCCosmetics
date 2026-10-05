@@ -44,7 +44,7 @@ public class UserEntity {
         //    return List.of();
         //}
 
-        Entity ownerPlayer = Bukkit.getEntity(owner);
+        Entity ownerPlayer = Bukkit.getPlayer(owner);
         if (ownerPlayer == null) {
             MessagesUtil.sendDebugMessages("Owner is null (refreshViewers), returning empty list");
             return List.of();
@@ -62,10 +62,10 @@ public class UserEntity {
             CosmeticUser user = CosmeticUsers.getUser(player);
             if(
                 user != null
-                && owner != user.getUniqueId()
+                && !owner.equals(user.getUniqueId())
                 && user.isInWardrobe()
                 // Fixes issue where players in wardrobe would see other players cosmetics if they were not in wardrobe
-                && !player.canSee(ownerPlayer)
+                && !owner.equals(player.getUniqueId())
             ) {
                 removePlayerIds.add(player.getUniqueId());
                 continue;

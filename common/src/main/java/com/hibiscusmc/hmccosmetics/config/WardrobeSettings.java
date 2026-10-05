@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.config;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.config.section.Wardrobe;
 import com.hibiscusmc.hmccosmetics.config.section.WardrobeLocation;
@@ -71,60 +72,60 @@ public class WardrobeSettings {
     private static final String TRANSITION_STAY_PATH = "title-stay";
     private static final String TRANSITION_FADE_OUT_PATH = "title-fade-out";
 
-    private static ConfigurationNode configRoot;
+    private static volatile ConfigurationNode configRoot;
     @Getter
-    private static boolean disableOnDamage;
+    private static volatile boolean disableOnDamage;
     @Getter
-    private static boolean portable;
+    private static volatile boolean portable;
     @Getter
-    private static boolean alwaysDisplay;
+    private static volatile boolean alwaysDisplay;
     @Getter
-    private static int rotationSpeed;
+    private static volatile int rotationSpeed;
     @Getter
-    private static int spawnDelay;
+    private static volatile int spawnDelay;
     @Getter
-    private static int despawnDelay;
+    private static volatile int despawnDelay;
     @Getter
-    private static float bossbarProgress;
+    private static volatile float bossbarProgress;
     @Getter
-    private static boolean applyCosmeticsOnClose;
+    private static volatile boolean applyCosmeticsOnClose;
     @Getter
-    private static boolean tryCosmeticsInWardrobe;
+    private static volatile boolean tryCosmeticsInWardrobe;
     @Getter
-    private static boolean equipPumpkin;
+    private static volatile boolean equipPumpkin;
     @Getter
-    private static boolean returnLastLocation;
+    private static volatile boolean returnLastLocation;
     @Getter
-    private static boolean enabledBossbar;
+    private static volatile boolean enabledBossbar;
     @Getter
-    private static boolean enterOpenMenu;
+    private static volatile boolean enterOpenMenu;
     @Getter
-    private static boolean forceExitGamemode;
+    private static volatile boolean forceExitGamemode;
     @Getter
-    private static boolean damagedKicked;
+    private static volatile boolean damagedKicked;
     @Getter
-    private static boolean preventDamage;
+    private static volatile boolean preventDamage;
     @Getter
-    private static GameMode exitGamemode;
-    private static final HashMap<String, Wardrobe> wardrobes = new HashMap<>();
+    private static volatile GameMode exitGamemode;
+    private static final ConcurrentHashMap<String, Wardrobe> wardrobes = new ConcurrentHashMap<>();
     @Getter
-    private static String bossbarMessage;
+    private static volatile String bossbarMessage;
     @Getter
-    private static BossBar.Overlay bossbarOverlay;
+    private static volatile BossBar.Overlay bossbarOverlay;
     @Getter
-    private static BossBar.Color bossbarColor;
+    private static volatile BossBar.Color bossbarColor;
     @Getter
-    private static boolean enabledTransition;
+    private static volatile boolean enabledTransition;
     @Getter
-    private static String transitionText;
+    private static volatile String transitionText;
     @Getter
-    private static int transitionDelay;
+    private static volatile int transitionDelay;
     @Getter
-    private static int transitionFadeIn;
+    private static volatile int transitionFadeIn;
     @Getter
-    private static int transitionStay;
+    private static volatile int transitionStay;
     @Getter
-    private static int transitionFadeOut;
+    private static volatile int transitionFadeOut;
 
     public static void load(ConfigurationNode source) {
         configRoot = source;

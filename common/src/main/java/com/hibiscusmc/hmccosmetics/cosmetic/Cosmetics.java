@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.cosmetic;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.google.common.collect.HashBiMap;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.util.MessagesUtil;
@@ -22,7 +23,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 public class Cosmetics {
-    private static final HashBiMap<String, Cosmetic> COSMETICS = HashBiMap.create();
+    private static final ConcurrentHashMap<String, Cosmetic> COSMETICS = new ConcurrentHashMap<>();
 
     private static CosmeticProvider PROVIDER = CosmeticProvider.Default.INSTANCE;
 
@@ -46,13 +47,13 @@ public class Cosmetics {
     @Contract(pure = true)
     @NotNull
     public static Set<Cosmetic> values() {
-        return COSMETICS.values();
+        return Set.copyOf(COSMETICS.values());
     }
 
     @Contract(pure = true)
     @NotNull
     public static Set<String> keys() {
-        return COSMETICS.keySet();
+        return Set.copyOf(COSMETICS.keySet());
     }
 
     public static boolean hasCosmetic(String id) {

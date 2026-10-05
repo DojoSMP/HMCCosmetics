@@ -63,7 +63,7 @@ public class CosmeticBalloonType extends Cosmetic implements CosmeticUpdateBehav
         if (entity == null || userBalloonManager == null) return;
         if (user.isInWardrobe()) return;
 
-        if (!userBalloonManager.getModelEntity().isValid()) {
+        if (!userBalloonManager.isModelValid()) {
             user.respawnBalloon();
             return;
         }
@@ -88,7 +88,7 @@ public class CosmeticBalloonType extends Cosmetic implements CosmeticUpdateBehav
         if (entity == null || userBalloonManager == null) return;
         if (user.isInWardrobe()) return;
 
-        if (!userBalloonManager.getModelEntity().isValid()) {
+        if (!userBalloonManager.isModelValid()) {
             return;
         }
 
@@ -100,7 +100,7 @@ public class CosmeticBalloonType extends Cosmetic implements CosmeticUpdateBehav
         List<Player> viewers = HMCCPacketManager.getViewers(entity.getLocation());
 
         if (entity.getLocation().getWorld() != userBalloonManager.getLocation().getWorld()) {
-            userBalloonManager.getModelEntity().teleport(newLocation);
+            userBalloonManager.setLocation(newLocation);
             HMCCPacketManager.sendTeleportPacket(userBalloonManager.getPufferfishBalloonId(), newLocation, false, viewers);
             return;
         }

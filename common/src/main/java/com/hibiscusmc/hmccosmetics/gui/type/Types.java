@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.gui.type;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.hibiscusmc.hmccosmetics.gui.type.types.TypeCosmetic;
 import com.hibiscusmc.hmccosmetics.gui.type.types.TypeEmpty;
 import org.jetbrains.annotations.NotNull;
@@ -8,7 +9,7 @@ import java.util.HashMap;
 
 public class Types {
 
-    private static final HashMap<String, Type> types = new HashMap<>();
+    private static final ConcurrentHashMap<String, Type> types = new ConcurrentHashMap<>();
 
     private static final TypeCosmetic TYPE_COSMETIC = new TypeCosmetic();
     private static final TypeEmpty TYPE_EMPTY = new TypeEmpty();

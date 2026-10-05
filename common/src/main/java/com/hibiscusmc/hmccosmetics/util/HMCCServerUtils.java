@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.util;
 
+import org.bukkit.entity.Entity;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import me.lojosho.hibiscuscommons.nms.NMSHandlers;
 import org.bukkit.*;
@@ -27,7 +28,7 @@ public class HMCCServerUtils {
         };
     }
 
-    public static org.bukkit.entity.Entity getEntity(int entityId, World world) {
+    public static Entity getEntity(int entityId, World world) {
         return NMSHandlers.getHandler().getUtilHandler().getEntity(entityId, world);
     }
 

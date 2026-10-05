@@ -1,12 +1,14 @@
 package com.hibiscusmc.hmccosmetics;
 
+import com.github.Anon8281.universalScheduler.UniversalScheduler;
+import com.github.Anon8281.universalScheduler.scheduling.schedulers.TaskScheduler;
 import com.hibiscusmc.hmccosmetics.api.events.HMCCosmeticSetupEvent;
 import com.hibiscusmc.hmccosmetics.command.CosmeticCommand;
 import com.hibiscusmc.hmccosmetics.command.CosmeticCommandTabComplete;
-import com.hibiscusmc.hmccosmetics.config.migration.WardrobeMigration;
-import com.hibiscusmc.hmccosmetics.config.section.DatabaseSettings;
 import com.hibiscusmc.hmccosmetics.config.Settings;
 import com.hibiscusmc.hmccosmetics.config.WardrobeSettings;
+import com.hibiscusmc.hmccosmetics.config.migration.WardrobeMigration;
+import com.hibiscusmc.hmccosmetics.config.section.DatabaseSettings;
 import com.hibiscusmc.hmccosmetics.cosmetic.Cosmetic;
 import com.hibiscusmc.hmccosmetics.cosmetic.Cosmetics;
 import com.hibiscusmc.hmccosmetics.database.Database;
@@ -26,9 +28,12 @@ import com.hibiscusmc.hmccosmetics.listener.*;
 import com.hibiscusmc.hmccosmetics.packets.CosmeticPacketInterface;
 import com.hibiscusmc.hmccosmetics.user.CosmeticUser;
 import com.hibiscusmc.hmccosmetics.user.CosmeticUsers;
-import com.hibiscusmc.hmccosmetics.util.search.PlayerSearchManager;
 import com.hibiscusmc.hmccosmetics.util.MessagesUtil;
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 import com.hibiscusmc.hmccosmetics.util.TranslationUtil;
+import com.hibiscusmc.hmccosmetics.util.search.PlayerSearchManager;
+import java.io.File;
+import java.nio.file.Path;
 import lombok.Getter;
 import me.lojosho.hibiscuscommons.HibiscusCommonsPlugin;
 import me.lojosho.hibiscuscommons.HibiscusPlugin;
@@ -48,8 +53,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.permissions.Permission;
 
-import java.io.File;
-import java.nio.file.Path;
 
 public final class HMCCosmeticsPlugin extends HibiscusPlugin {
 
@@ -58,6 +61,9 @@ public final class HMCCosmeticsPlugin extends HibiscusPlugin {
 
     @Getter
     private PlayerSearchManager playerSearchManager;
+
+    @Getter
+    private TaskScheduler taskScheduler;
 
     public HMCCosmeticsPlugin() {
         super(13873, 1879);
@@ -70,6 +76,7 @@ public final class HMCCosmeticsPlugin extends HibiscusPlugin {
     public void onStart() {
         // Plugin startup logic
         instance = this;
+        taskScheduler = UniversalScheduler.getScheduler(this);
 
         // File setup
         saveDefaultConfig();
@@ -169,14 +176,17 @@ public final class HMCCosmeticsPlugin extends HibiscusPlugin {
 
     @Override
     public void onEnd() {
-        // Plugin shutdown logic
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            CosmeticUser user = CosmeticUsers.getUser(player);
-            if (user == null) continue;
-            if (user.isInWardrobe()) {
-                user.leaveWardrobe(true);
+        try {
+            for (CosmeticUser user : CosmeticUsers.values()) {
+                user.stopTicking();
+                Database.save(user);
+                Scheduler.run(user.getEntity(), () -> {
+                    if (user.isInWardrobe()) user.leaveWardrobe(true);
+                    user.destroy();
+                });
             }
-            Database.save(user);
+        } finally {
+            if (Database.getData() != null) Database.getData().shutdown();
         }
     }
 
@@ -184,7 +194,7 @@ public final class HMCCosmeticsPlugin extends HibiscusPlugin {
         return instance;
     }
 
-    public static void setup() {
+    public static synchronized void setup() {
         getInstance().reloadConfig();
 
         // Configuration setup

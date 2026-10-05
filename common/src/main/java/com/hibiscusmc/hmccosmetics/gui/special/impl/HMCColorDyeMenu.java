@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.gui.special.impl;
 
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 import com.hibiscusmc.hmccolor.HMCColorApi;
 import com.hibiscusmc.hmccolor.shaded.gui.guis.Gui;
 import com.hibiscusmc.hmccolor.shaded.gui.guis.GuiItem;
@@ -55,7 +56,7 @@ public class HMCColorDyeMenu implements DyeMenu {
     private void addCosmetic(@NotNull Player viewer, @NotNull CosmeticHolder cosmeticHolder, @NotNull Cosmetic cosmetic, @Nullable Color color) {
         cosmeticHolder.addCosmetic(cosmetic, color);
         viewer.setItemOnCursor(new ItemStack(Material.AIR));
-        Bukkit.getScheduler().runTaskLater(HMCCosmeticsPlugin.getInstance(), () -> {
+        Scheduler.later(viewer, () -> {
             viewer.closeInventory();
             cosmeticHolder.updateCosmetic(cosmetic.getSlot());
         }, 2);

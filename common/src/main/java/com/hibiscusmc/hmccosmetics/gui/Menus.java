@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.gui;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.config.Settings;
 import com.hibiscusmc.hmccosmetics.util.MessagesUtil;
@@ -23,8 +24,8 @@ public class Menus {
 
     private static final List<String> FILES_TO_IGNORE = List.of("internal_dye_menu.yml");
 
-    private static final HashMap<String, Menu> MENUS = new HashMap<>();
-    private static final HashMap<UUID, Long> COOLDOWNS = new HashMap<>();
+    private static final ConcurrentHashMap<String, Menu> MENUS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Long> COOLDOWNS = new ConcurrentHashMap<>();
 
     public static void addMenu(@NotNull Menu menu) {
         MENUS.put(menu.getId().toUpperCase(), menu);

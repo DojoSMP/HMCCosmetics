@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.gui.special.impl;
 
+import java.util.concurrent.CopyOnWriteArrayList;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.config.Settings;
 import com.hibiscusmc.hmccosmetics.cosmetic.Cosmetic;
@@ -37,18 +38,18 @@ import java.util.logging.Level;
 
 public class InternalDyeMenu implements DyeMenu {
 
-    private List<PrimaryColor> PRIMARY_COLORS;
+    private volatile List<PrimaryColor> PRIMARY_COLORS;
 
     private List<String> FORMAT = List.of();
-    private int ROWS;
-    private final ArrayList<Integer> PRIMARY_COLORS_SLOTS = new ArrayList<>();
-    private final ArrayList<Integer> SECONDARY_COLORS_SLOTS = new ArrayList<>();
+    private volatile int ROWS;
+    private final List<Integer> PRIMARY_COLORS_SLOTS = new CopyOnWriteArrayList<>();
+    private final List<Integer> SECONDARY_COLORS_SLOTS = new CopyOnWriteArrayList<>();
 
-    private int INPUT_SLOT;
-    private int OUTPUT_SLOT;
+    private volatile int INPUT_SLOT;
+    private volatile int OUTPUT_SLOT;
 
-    private @Nullable ItemStack PRIMARY_COLOR_ITEM = null;
-    private @Nullable ItemStack SECONDARY_COLOR_ITEM = null;
+    private volatile @Nullable ItemStack PRIMARY_COLOR_ITEM = null;
+    private volatile @Nullable ItemStack SECONDARY_COLOR_ITEM = null;
 
     @Override
     public void reload() {

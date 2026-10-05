@@ -41,7 +41,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 import java.util.function.Consumer;
 
 public class Menu {
@@ -149,6 +150,10 @@ public class Menu {
     }
 
     public void openMenu(@NotNull Player viewer, @NotNull CosmeticHolder cosmeticHolder, boolean ignorePermission) {
+        if (!Scheduler.owns(viewer)) {
+            Scheduler.run(viewer, () -> openMenu(viewer, cosmeticHolder, ignorePermission));
+            return;
+        }
         if (!ignorePermission && !permissionNode.isBlank()) {
             if (!viewer.hasPermission(permissionNode) && !viewer.isOp()) {
                 MessagesUtil.sendMessage(viewer, "no-permission");
@@ -164,18 +169,19 @@ public class Menu {
 
         gui.setDefaultClickAction(event -> event.setCancelled(true));
 
-        AtomicInteger taskid = new AtomicInteger(-1);
+        AtomicReference<Runnable> cancelRefresh = new AtomicReference<>(() -> {});
         gui.setOpenGuiAction(event -> {
             Runnable run = () -> {
-                if (gui.getInventory().getViewers().isEmpty() && taskid.get() != -1) {
-                    Bukkit.getScheduler().cancelTask(taskid.get());
+                if (gui.getInventory().getViewers().isEmpty()) {
+                    cancelRefresh.get().run();
+                    return;
                 }
 
                 updateMenu(viewer, cosmeticHolder, gui);
             };
 
-            if (refreshRate != -1) {
-                taskid.set(Bukkit.getScheduler().scheduleSyncRepeatingTask(HMCCosmeticsPlugin.getInstance(), run, 0, refreshRate));
+            if (refreshRate > 0) {
+                cancelRefresh.set(Scheduler.repeat(viewer, cancel -> run.run(), 1, refreshRate));
             } else {
                 run.run();
             }
@@ -184,10 +190,10 @@ public class Menu {
         gui.setCloseGuiAction(event -> {
             if (cosmeticHolder instanceof CosmeticUser user) {
                 PlayerMenuCloseEvent closeEvent = new PlayerMenuCloseEvent(user, this, event.getReason());
-                Bukkit.getScheduler().runTask(HMCCosmeticsPlugin.getInstance(), () -> Bukkit.getPluginManager().callEvent(closeEvent));
+                Scheduler.later(viewer, () -> Bukkit.getPluginManager().callEvent(closeEvent), 1);
             }
 
-            if (taskid.get() != -1) Bukkit.getScheduler().cancelTask(taskid.get());
+            cancelRefresh.get().run();
         });
 
         Runnable openGuiTask = () -> {
@@ -198,16 +204,16 @@ public class Menu {
         // API
         if (cosmeticHolder instanceof CosmeticUser user) {
             PlayerMenuOpenEvent event = new PlayerMenuOpenEvent(user, this);
-            Bukkit.getScheduler().runTask(HMCCosmeticsPlugin.getInstance(), () -> {
+            Scheduler.later(viewer, () -> {
                 Bukkit.getPluginManager().callEvent(event);
                 if (!event.isCancelled()) {
                     openGuiTask.run();
                 }
-            });
+            }, 1);
         }
         // Internal
         else {
-            Bukkit.getScheduler().runTask(HMCCosmeticsPlugin.getInstance(), openGuiTask);
+            Scheduler.later(viewer, openGuiTask, 1);
         }
     }
 

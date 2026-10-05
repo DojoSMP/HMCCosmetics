@@ -41,7 +41,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitTask;
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -52,16 +54,57 @@ import java.util.logging.Level;
 public class CosmeticUser implements CosmeticHolder {
     @Getter
     private final UUID uniqueId;
-    private int taskId = -1;
-    private final HashMap<CosmeticSlot, Cosmetic> playerCosmetics = new HashMap<>();
-    private UserWardrobeManager userWardrobeManager;
-    private UserBalloonManager userBalloonManager;
+    @Getter
+    private final int entityId;
+    private Runnable cancelTick = () -> {};
+    private volatile Map<EquipmentSlot, ItemStack> packetItems = Map.of();
+    private volatile List<Integer> packetBackpackIds = List.of();
+    private volatile int packetBackpackMount = -1;
+    @Getter
+    private volatile boolean packetFirstPersonBackpack;
+
+    public ItemStack getPacketItem(EquipmentSlot slot) {
+        ItemStack item = packetItems.get(slot);
+        return item == null ? null : item.clone();
+    }
+
+    public List<Integer> getPacketBackpackIds() { return packetBackpackIds; }
+    public int getPacketBackpackMount() { return packetBackpackMount; }
+
+    public void refreshPacketState() {
+        if (!Scheduler.owns(getEntity())) return;
+        Map<EquipmentSlot, ItemStack> items = new EnumMap<>(EquipmentSlot.class);
+        if (!isInWardrobe() && !isHidden()) {
+            for (Cosmetic cosmetic : getCosmetics()) {
+                if (cosmetic instanceof CosmeticArmorType armor) {
+                    if (Settings.getSlotOption(armor.getEquipSlot()).isRequireEmpty()
+                            && !getPlayer().getInventory().getItem(armor.getEquipSlot()).getType().isAir()) continue;
+                    ItemStack item = armor.getItem(this);
+                    if (item != null) items.put(armor.getEquipSlot(), item.clone());
+                }
+            }
+        }
+        packetItems = Map.copyOf(items);
+        UserBackpackManager backpack = userBackpackManager;
+        packetBackpackIds = backpack == null ? List.of() : List.copyOf(backpack.getEntityManager().getIds());
+        Cosmetic cosmetic = getCosmetic(CosmeticSlot.BACKPACK);
+        packetBackpackMount = backpack == null ? -1 : backpack.getFirstArmorStandId();
+        packetFirstPersonBackpack = cosmetic instanceof CosmeticBackpackType type && type.isFirstPersonCompadible();
+    }
+
+    public void stopTicking() {
+        cancelTick.run();
+        cancelTick = () -> {};
+    }
+    private final Map<CosmeticSlot, Cosmetic> playerCosmetics = new ConcurrentHashMap<>();
+    private volatile UserWardrobeManager userWardrobeManager;
+    private volatile UserBalloonManager userBalloonManager;
     @Getter @Nullable
-    private UserBackpackManager userBackpackManager;
+    private volatile UserBackpackManager userBackpackManager;
 
     // Cosmetic Settings/Toggles
-    private final ArrayList<HiddenReason> hiddenReason = new ArrayList<>();
-    private final HashMap<CosmeticSlot, Color> colors = new HashMap<>();
+    private final List<HiddenReason> hiddenReason = new CopyOnWriteArrayList<>();
+    private final Map<CosmeticSlot, Color> colors = new ConcurrentHashMap<>();
 
     @Getter @Setter
     @ApiStatus.Internal
@@ -80,6 +123,8 @@ public class CosmeticUser implements CosmeticHolder {
 
     public CosmeticUser(@NotNull UUID uuid) {
         this.uniqueId = uuid;
+        Entity entity = getEntity();
+        this.entityId = entity == null ? -1 : entity.getEntityId();
     }
 
     /**
@@ -175,7 +220,7 @@ public class CosmeticUser implements CosmeticHolder {
     /**
      * Start ticking against the {@link CosmeticUser}.
      * @implNote The tick-rate is determined by the tick period specified in the configuration, if it is less-than or equal to 0
-     * there will be no {@link BukkitTask} created, and the {@link CosmeticUser#taskId} will be -1
+     * there will be no repeating task created
      */
     public final void startTicking() {
         int tickPeriod = Settings.getTickPeriod();
@@ -184,8 +229,8 @@ public class CosmeticUser implements CosmeticHolder {
             return;
         }
 
-        final BukkitTask task = Bukkit.getScheduler().runTaskTimer(HMCCosmeticsPlugin.getInstance(), this::tick, 0, tickPeriod);
-        this.taskId = task.getTaskId();
+        stopTicking();
+        this.cancelTick = Scheduler.repeat(getEntity(), cancel -> tick(), 1, tickPeriod);
     }
 
     /**
@@ -210,9 +255,10 @@ public class CosmeticUser implements CosmeticHolder {
     }
 
     public void destroy() {
-        if(this.taskId != -1) { // ensure we're actually ticking this user.
-            Bukkit.getScheduler().cancelTask(taskId);
-        }
+        stopTicking();
+        packetItems = Map.of();
+        packetBackpackIds = List.of();
+        packetBackpackMount = -1;
 
         despawnBackpack();
         despawnBalloon();
@@ -230,6 +276,11 @@ public class CosmeticUser implements CosmeticHolder {
 
     @Override
     public void addCosmetic(@NotNull Cosmetic cosmetic, @Nullable Color color) {
+        if (!Scheduler.owns(getEntity())) {
+            Cosmetic requested = cosmetic;
+            Scheduler.run(getEntity(), () -> addCosmetic(requested, color));
+            return;
+        }
         // API
         PlayerCosmeticEquipEvent event = new PlayerCosmeticEquipEvent(this, cosmetic);
         Bukkit.getPluginManager().callEvent(event);
@@ -258,6 +309,7 @@ public class CosmeticUser implements CosmeticHolder {
         }
         // API
         PlayerCosmeticPostEquipEvent postEquipEvent = new PlayerCosmeticPostEquipEvent(this, cosmetic);
+        refreshPacketState();
         Bukkit.getPluginManager().callEvent(postEquipEvent);
     }
 
@@ -279,6 +331,10 @@ public class CosmeticUser implements CosmeticHolder {
 
     @Override
     public void removeCosmeticSlot(@NotNull CosmeticSlot slot) {
+        if (!Scheduler.owns(getEntity())) {
+            Scheduler.run(getEntity(), () -> removeCosmeticSlot(slot));
+            return;
+        }
         // API
         PlayerCosmeticRemoveEvent event = new PlayerCosmeticRemoveEvent(this, getCosmetic(slot));
         Bukkit.getPluginManager().callEvent(event);
@@ -294,6 +350,7 @@ public class CosmeticUser implements CosmeticHolder {
         }
         colors.remove(slot);
         playerCosmetics.remove(slot);
+        refreshPacketState();
         removeArmor(slot);
     }
 
@@ -308,6 +365,10 @@ public class CosmeticUser implements CosmeticHolder {
 
     @Override
     public boolean updateCosmetic(@NotNull CosmeticSlot slot) {
+        if (!Scheduler.owns(getEntity())) {
+            Scheduler.run(getEntity(), () -> updateCosmetic(slot));
+            return hasCosmeticInSlot(slot);
+        }
         final Cosmetic cosmetic = playerCosmetics.get(slot);
         if(cosmetic == null) {
             return false;
@@ -318,6 +379,7 @@ public class CosmeticUser implements CosmeticHolder {
             return false;
         }
 
+        refreshPacketState();
         behavior.dispatchUpdate(this);
         return true;
     }
@@ -343,6 +405,11 @@ public class CosmeticUser implements CosmeticHolder {
     }
 
     public void updateCosmetic() {
+        if (!Scheduler.owns(getEntity())) {
+            Scheduler.run(getEntity(), () -> updateCosmetic());
+            return;
+        }
+        refreshPacketState();
         MessagesUtil.sendDebugMessages("updateCosmetic (All) - start");
         final HashMap<EquipmentSlot, ItemStack> items = new HashMap<>();
 
@@ -498,6 +565,11 @@ public class CosmeticUser implements CosmeticHolder {
      * @param ignorePermission If true, the wardrobe's permission is not checked. Useful when another sender forces the player into the wardrobe.
      */
     public void enterWardrobe(@NotNull Wardrobe wardrobe, boolean ignoreDistance, boolean ignorePermission) {
+        if (!Scheduler.owns(getEntity())) {
+            Wardrobe requested = wardrobe;
+            Scheduler.run(getEntity(), () -> enterWardrobe(requested, ignoreDistance, ignorePermission));
+            return;
+        }
         if (!ignorePermission && wardrobe.hasPermission() && !getPlayer().hasPermission(wardrobe.getPermission())) {
             MessagesUtil.sendMessage(getPlayer(), "no-permission");
             return;
@@ -536,10 +608,15 @@ public class CosmeticUser implements CosmeticHolder {
      * @param ejected If true, the player was ejected from the wardrobe (Skips transition). If false, the player left the wardrobe normally.
      */
     public void leaveWardrobe(boolean ejected) {
+        if (!Scheduler.owns(getEntity())) {
+            Scheduler.run(getEntity(), () -> leaveWardrobe(ejected));
+            return;
+        }
         UserWardrobeManager userWardrobe = getWardrobeManager();
         if (userWardrobe == null) return;
 
-        if (userWardrobe.getWardrobeStatus() != UserWardrobeManager.WardrobeStatus.RUNNING) return;
+        if (userWardrobe.getWardrobeStatus() == UserWardrobeManager.WardrobeStatus.STOPPING) return;
+        boolean starting = userWardrobe.getWardrobeStatus() != UserWardrobeManager.WardrobeStatus.RUNNING;
         PlayerWardrobeLeaveEvent event = new PlayerWardrobeLeaveEvent(this, userWardrobe);
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) return;
@@ -549,7 +626,7 @@ public class CosmeticUser implements CosmeticHolder {
         userWardrobe.setWardrobeStatus(UserWardrobeManager.WardrobeStatus.STOPPING);
         userWardrobe.setLastOpenMenu(Menus.getDefaultMenu());
 
-        if (WardrobeSettings.isEnabledTransition() && !ejected) {
+        if (WardrobeSettings.isEnabledTransition() && !ejected && !starting) {
             MessagesUtil.sendTitle(
                     getPlayer(),
                     WardrobeSettings.getTransitionText(),
@@ -557,13 +634,14 @@ public class CosmeticUser implements CosmeticHolder {
                     WardrobeSettings.getTransitionStay(),
                     WardrobeSettings.getTransitionFadeOut()
             );
-            Bukkit.getScheduler().runTaskLater(HMCCosmeticsPlugin.getInstance(), () -> {
-                userWardrobeManager.end();
+            Scheduler.later(getEntity(), () -> {
+                if (userWardrobeManager != userWardrobe) return;
                 userWardrobeManager = null;
+                userWardrobe.end();
             }, WardrobeSettings.getTransitionDelay());
         } else {
-            userWardrobeManager.end();
             userWardrobeManager = null;
+            userWardrobe.end();
         }
     }
 
@@ -598,10 +676,10 @@ public class CosmeticUser implements CosmeticHolder {
     public void spawnBalloon(CosmeticBalloonType cosmeticBalloonType) {
         if (this.userBalloonManager != null) return;
 
-        org.bukkit.entity.Entity entity = getEntity();
+        Entity entity = getEntity();
 
         UserBalloonManager userBalloonManager1 = new UserBalloonManager(this, entity.getLocation());
-        userBalloonManager1.getModelEntity().teleport(entity.getLocation().add(cosmeticBalloonType.getBalloonOffset()));
+        userBalloonManager1.setLocation(entity.getLocation().add(cosmeticBalloonType.getBalloonOffset()));
 
         userBalloonManager1.spawnModel(cosmeticBalloonType, getCosmeticColor(cosmeticBalloonType.getSlot()));
         userBalloonManager1.addPlayerToModel(this, cosmeticBalloonType, getCosmeticColor(cosmeticBalloonType.getSlot()));
@@ -693,7 +771,9 @@ public class CosmeticUser implements CosmeticHolder {
         Player player = getPlayer();
         if (player == null) return;
         for (final Player p : Bukkit.getOnlinePlayers()) {
-            p.hidePlayer(HMCCosmeticsPlugin.getInstance(), player);
+            Scheduler.run(p, () -> {
+                if (isInWardrobe()) p.hidePlayer(HMCCosmeticsPlugin.getInstance(), player);
+            });
             player.hidePlayer(HMCCosmeticsPlugin.getInstance(), p);
         }
     }
@@ -702,12 +782,18 @@ public class CosmeticUser implements CosmeticHolder {
         Player player = getPlayer();
         if (player == null) return;
         for (final Player p : Bukkit.getOnlinePlayers()) {
-            p.showPlayer(HMCCosmeticsPlugin.getInstance(), player);
+            Scheduler.run(p, () -> {
+                if (!isInWardrobe()) p.showPlayer(HMCCosmeticsPlugin.getInstance(), player);
+            });
             player.showPlayer(HMCCosmeticsPlugin.getInstance(), p);
         }
     }
 
     public void hideCosmetics(@NotNull HiddenReason reason) {
+        if (!Scheduler.owns(getEntity())) {
+            Scheduler.run(getEntity(), () -> hideCosmetics(reason));
+            return;
+        }
         if (hiddenReason.contains(reason)) return;
 
         PlayerCosmeticHideEvent event = new PlayerCosmeticHideEvent(this, reason);
@@ -737,6 +823,10 @@ public class CosmeticUser implements CosmeticHolder {
     }
 
     public void showCosmetics(@NotNull HiddenReason reason) {
+        if (!Scheduler.owns(getEntity())) {
+            Scheduler.run(getEntity(), () -> showCosmetics(reason));
+            return;
+        }
         if (hiddenReason.isEmpty()) return;
         if (!hiddenReason.contains(reason)) return;
 
@@ -774,10 +864,14 @@ public class CosmeticUser implements CosmeticHolder {
     }
 
     public @NotNull List<HiddenReason> getHiddenReasons() {
-        return hiddenReason;
+        return List.copyOf(hiddenReason);
     }
 
     public void clearHiddenReasons() {
+        if (!Scheduler.owns(getEntity())) {
+            Scheduler.run(getEntity(), () -> clearHiddenReasons());
+            return;
+        }
         hiddenReason.clear();
     }
 

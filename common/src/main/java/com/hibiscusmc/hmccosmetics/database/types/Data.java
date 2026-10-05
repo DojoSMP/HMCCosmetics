@@ -26,6 +26,8 @@ public abstract class Data {
 
     public abstract void clear(UUID uniqueId);
 
+    public void shutdown() {}
+
     // BACKPACK=colorfulbackpack&RRGGBB,HELMET=niftyhat,BALLOON=colorfulballoon,CHESTPLATE=niftychestplate
     @NotNull
     public final String serializeData(@NotNull CosmeticUser user) {

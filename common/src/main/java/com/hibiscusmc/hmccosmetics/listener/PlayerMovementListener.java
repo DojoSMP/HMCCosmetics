@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.listener;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.hibiscusmc.hmccosmetics.cosmetic.CosmeticSlot;
 import com.hibiscusmc.hmccosmetics.user.CosmeticUser;
 import com.hibiscusmc.hmccosmetics.user.CosmeticUsers;
@@ -26,7 +27,7 @@ public class PlayerMovementListener implements Listener {
     );
 
     // Player Id -> Small Location
-    private final Map<UUID, SmallLocation> locations = new HashMap<>();
+    private final Map<UUID, SmallLocation> locations = new ConcurrentHashMap<>();
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent ev) {

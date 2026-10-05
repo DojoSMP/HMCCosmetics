@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.util;
 
+import java.util.concurrent.ConcurrentHashMap;
 import me.lojosho.shaded.configurate.ConfigurationNode;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,7 +11,7 @@ import java.util.List;
 public class TranslationUtil {
 
     // unlocked-cosmetic -> true -> True
-    private static final HashMap<@NotNull String, @NotNull List<TranslationPair>> KEYS = new HashMap<>();
+    private static final ConcurrentHashMap<@NotNull String, @NotNull List<TranslationPair>> KEYS = new ConcurrentHashMap<>();
 
     public static void setup(@NotNull ConfigurationNode config) {
         KEYS.clear();

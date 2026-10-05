@@ -127,6 +127,7 @@ public class CosmeticBackpackType extends Cosmetic implements CosmeticUpdateBeha
 
     @Override
     public void dispatchMove(@NotNull CosmeticUser user, @NotNull Location from, @NotNull Location to) {
+        if (user.isInWardrobe()) return;
         @SuppressWarnings("DuplicatedCode") // thanks.
         Entity entity = user.getEntity();
         if(entity == null) {

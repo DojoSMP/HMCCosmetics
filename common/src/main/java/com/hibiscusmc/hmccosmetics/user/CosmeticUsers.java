@@ -23,8 +23,7 @@ public class CosmeticUsers {
      * @param user The user to add to the HashMap.
      */
     public static void addUser(@NotNull CosmeticUser user) {
-        if (COSMETIC_USERS.containsKey(user.getUniqueId())) return; // do not add if already exists
-        COSMETIC_USERS.put(user.getUniqueId(), user);
+        COSMETIC_USERS.putIfAbsent(user.getUniqueId(), user);
     }
 
     /**
@@ -70,9 +69,8 @@ public class CosmeticUsers {
      */
     @Nullable
     public static CosmeticUser getUser(int entityId) {
-        for (World world : Bukkit.getWorlds()) {
-            if (HMCCServerUtils.getEntity(entityId, world) instanceof Player player)
-                return COSMETIC_USERS.get(player.getUniqueId());
+        for (CosmeticUser user : COSMETIC_USERS.values()) {
+            if (user.getEntityId() == entityId) return user;
         }
         return null;
     }

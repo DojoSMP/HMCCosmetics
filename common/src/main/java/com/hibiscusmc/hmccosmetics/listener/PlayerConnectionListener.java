@@ -1,5 +1,7 @@
 package com.hibiscusmc.hmccosmetics.listener;
 
+import java.util.logging.Level;
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.api.events.PlayerLoadEvent;
 import com.hibiscusmc.hmccosmetics.api.events.PlayerPreLoadEvent;
@@ -27,8 +29,8 @@ public class PlayerConnectionListener implements Listener {
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         if (DatabaseSettings.isEnabledDelay()) {
             MessagesUtil.sendDebugMessages("Delay Enabled with " + DatabaseSettings.getDelayLength() + " ticks");
-            Bukkit.getScheduler().runTaskLater(
-                HMCCosmeticsPlugin.getInstance(),
+            Scheduler.later(
+                event.getPlayer(),
                 () -> this.loadUserData(event.getPlayer()),
                 DatabaseSettings.getDelayLength()
             );
@@ -46,7 +48,8 @@ public class PlayerConnectionListener implements Listener {
         if (preLoadEvent.isCancelled()) return;
 
         Database.get(playerId).thenAccept(userData -> {
-            Bukkit.getScheduler().runTask(HMCCosmeticsPlugin.getInstance(), () -> {
+            Scheduler.run(player, () -> {
+                if (!player.isOnline() || Bukkit.getPlayer(playerId) != player || CosmeticUsers.getUser(playerId) != null) return;
                 CosmeticUser cosmeticUser = CosmeticUsers.getProvider()
                     .createCosmeticUser(playerId)
                     .initialize(userData);
@@ -59,13 +62,13 @@ public class PlayerConnectionListener implements Listener {
                 Bukkit.getPluginManager().callEvent(playerLoadEvent);
 
                 // And finally, launch an update for the cosmetics they have.
-                Bukkit.getScheduler().runTaskLater(HMCCosmeticsPlugin.getInstance(), () -> {
+                Scheduler.later(player, () -> {
                     if (cosmeticUser.getPlayer() == null) return;
                     cosmeticUser.updateCosmetic();
                 }, 4);
             });
         }).exceptionally(ex -> {
-            MessagesUtil.sendDebugMessages("Unable to load Cosmetic User " + playerId + ". Exception: " + ex.getMessage());
+            HMCCosmeticsPlugin.getInstance().getLogger().log(Level.SEVERE, "Unable to load Cosmetic User " + playerId, ex);
             return null;
         });
     }

@@ -33,6 +33,7 @@ dependencies {
     testCompileOnly(libs.lombok)
     testAnnotationProcessor(libs.lombok)
 
+    implementation(libs.universal.scheduler)
     implementation(libs.triumph.gui) { exclude("net.kyori") }
 }
 

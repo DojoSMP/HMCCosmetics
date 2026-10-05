@@ -61,7 +61,7 @@ public class MySQLData extends SQLData {
 
     @Override
     public void clear(UUID uniqueId) {
-        Bukkit.getScheduler().runTaskAsynchronously(HMCCosmeticsPlugin.getInstance(), () -> {
+        worker.execute( () -> {
             try (PreparedStatement preparedSt = preparedStatement("DELETE FROM COSMETICDATABASE WHERE UUID=?;")) {
                 preparedSt.setString(1, uniqueId.toString());
                 preparedSt.executeUpdate();
@@ -90,14 +90,16 @@ public class MySQLData extends SQLData {
     }
 
     public void close() {
-        Bukkit.getScheduler().runTaskAsynchronously(HMCCosmeticsPlugin.getInstance(), () -> {
-            try {
-                if (connection == null) throw new IllegalStateException("Connection is null");
-                connection.close();
-            } catch (SQLException | NullPointerException e) {
-                System.out.println(e.getMessage());
-            }
-        });
+        closeConnection();
+    }
+
+    @Override
+    protected void closeConnection() {
+        try {
+            if (connection != null) connection.close();
+        } catch (SQLException e) {
+            throw new IllegalStateException("Unable to close MySQL connection", e);
+        }
     }
 
     @NotNull

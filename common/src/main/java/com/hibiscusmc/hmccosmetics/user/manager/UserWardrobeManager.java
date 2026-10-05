@@ -1,5 +1,7 @@
 package com.hibiscusmc.hmccosmetics.user.manager;
 
+import org.bukkit.Bukkit;
+import me.lojosho.hibiscuscommons.util.ServerUtils;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.config.WardrobeSettings;
 import com.hibiscusmc.hmccosmetics.config.section.Wardrobe;
@@ -30,7 +32,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -63,10 +65,14 @@ public class UserWardrobeManager {
     @Getter
     private BossBar bossBar;
     @Getter
-    private boolean active;
+    private volatile boolean active;
+    @Getter
+    private boolean teleporting;
+    private boolean originalAllowFlight;
+    private Runnable cancelUpdate = () -> {};
     @Setter
     @Getter
-    private WardrobeStatus wardrobeStatus;
+    private volatile WardrobeStatus wardrobeStatus;
     @Getter
     @Setter
     private Menu lastOpenMenu;
@@ -76,17 +82,17 @@ public class UserWardrobeManager {
 
     public UserWardrobeManager(CosmeticUser user, Wardrobe wardrobe) {
         World world = user.getEntity().getWorld();
-        NPC_ID = me.lojosho.hibiscuscommons.util.ServerUtils.getNextEntityId(world);
-        ARMORSTAND_ID = me.lojosho.hibiscuscommons.util.ServerUtils.getNextEntityId(world);
+        NPC_ID = ServerUtils.getNextEntityId(world);
+        ARMORSTAND_ID = ServerUtils.getNextEntityId(world);
         WARDROBE_UUID = UUID.randomUUID();
         this.user = user;
 
         this.wardrobe = wardrobe;
         this.wardrobeLocation = wardrobe.getLocation();
 
-        this.exitLocation = wardrobeLocation.getLeaveLocation();
-        this.viewingLocation = wardrobeLocation.getViewerLocation();
-        this.npcLocation = wardrobeLocation.getNpcLocation();
+        this.exitLocation = wardrobeLocation.getLeaveLocation().clone();
+        this.viewingLocation = wardrobeLocation.getViewerLocation().clone();
+        this.npcLocation = wardrobeLocation.getNpcLocation().clone();
 
         String defaultMenu = wardrobe.getDefaultMenu();
         if (defaultMenu != null) {
@@ -114,19 +120,21 @@ public class UserWardrobeManager {
         Player player = user.getPlayer();
 
         this.originalGamemode = player.getGameMode();
+        this.originalAllowFlight = player.getAllowFlight();
+        user.refreshPacketState();
         if (WardrobeSettings.isReturnLastLocation()) {
             this.exitLocation = player.getLocation().clone();
         }
 
         user.hidePlayer();
-        if (!Bukkit.getServer().getAllowFlight()) player.setAllowFlight(true);
+        player.setAllowFlight(true);
         List<Player> viewer = Collections.singletonList(player);
         List<Player> outsideViewers = HMCCPacketManager.getViewers(viewingLocation);
         outsideViewers.remove(player);
 
         MessagesUtil.sendMessage(player, "opened-wardrobe");
 
-        Runnable run = () -> {
+        Runnable show = () -> {
             if (!player.isOnline()) {
                 end();
                 return;
@@ -141,7 +149,7 @@ public class UserWardrobeManager {
             viewerPackets.add(packetBuilder.buildEntityRotateHeadPacket(ARMORSTAND_ID, viewingLocation));
 
             // Player
-            player.teleport(viewingLocation, PlayerTeleportEvent.TeleportCause.PLUGIN);
+
             player.setInvisible(true);
             viewerPackets.add(packetBuilder.buildPlayerGamemodeChangePacket(GameMode.SPECTATOR));
             viewerPackets.add(packetBuilder.buildEntityCameraPacket(ARMORSTAND_ID));
@@ -190,7 +198,7 @@ public class UserWardrobeManager {
 
                     Location balloonLocation = npcLocation.clone().add(cosmetic.getBalloonOffset());
                     HMCCPacketManager.sendTeleportPacket(user.getBalloonManager().getPufferfishBalloonId(), balloonLocation, false, viewer);
-                    user.getBalloonManager().getModelEntity().teleport(balloonLocation);
+                    user.getBalloonManager().setLocation(balloonLocation);
                     user.getBalloonManager().setLocation(balloonLocation);
                 }
             }
@@ -215,6 +223,18 @@ public class UserWardrobeManager {
             setWardrobeStatus(WardrobeStatus.RUNNING);
         };
 
+        Runnable run = () -> {
+            if (user.getWardrobeManager() != this || wardrobeStatus != WardrobeStatus.STARTING) return;
+            teleporting = true;
+            user.despawnBalloon();
+            Scheduler.teleport(player, viewingLocation, success -> {
+                teleporting = false;
+                if (user.getWardrobeManager() != this || wardrobeStatus != WardrobeStatus.STARTING) return;
+                if (success) show.run();
+                else user.leaveWardrobe(true);
+            });
+        };
+
 
         if (WardrobeSettings.isEnabledTransition()) {
             MessagesUtil.sendTitle(
@@ -224,7 +244,7 @@ public class UserWardrobeManager {
                     WardrobeSettings.getTransitionStay(),
                     WardrobeSettings.getTransitionFadeOut()
             );
-            Bukkit.getScheduler().runTaskLater(HMCCosmeticsPlugin.getInstance(), run, WardrobeSettings.getTransitionDelay());
+            Scheduler.later(player, run, WardrobeSettings.getTransitionDelay());
         } else {
             run.run();
         }
@@ -233,6 +253,8 @@ public class UserWardrobeManager {
 
     public void end() {
         setWardrobeStatus(WardrobeStatus.STOPPING);
+        this.active = false;
+        cancelUpdate.run();
         Player player = user.getPlayer();
 
         List<Player> viewer = Collections.singletonList(player);
@@ -240,7 +262,7 @@ public class UserWardrobeManager {
         outsideViewers.remove(player);
 
         if (player == null) return;
-        if (!Bukkit.getServer().getAllowFlight()) player.setAllowFlight(false);
+        player.setAllowFlight(originalAllowFlight);
         MessagesUtil.sendMessage(player, "closed-wardrobe");
 
         Runnable run = () -> {
@@ -280,7 +302,7 @@ public class UserWardrobeManager {
             user.showPlayer();
 
             if (user.hasCosmeticInSlot(CosmeticSlot.BACKPACK)) {
-                user.respawnBackpack();
+                user.despawnBackpack();
                 //PacketManager.ridingMountPacket(player.getEntityId(), VIEWER.getBackpackEntity().getEntityId(), viewer);
             }
 
@@ -289,7 +311,7 @@ public class UserWardrobeManager {
                 //PacketManager.sendLeashPacket(VIEWER.getBalloonEntity().getPufferfishBalloonId(), player.getEntityId(), viewer);
             }
 
-            player.teleport(Objects.requireNonNullElseGet(exitLocation, () -> player.getWorld().getSpawnLocation()), PlayerTeleportEvent.TeleportCause.PLUGIN);
+
 
             HashMap<EquipmentSlot, ItemStack> items = new HashMap<>();
             for (EquipmentSlot slot : HMCCInventoryUtils.getPlayerArmorSlots()) {
@@ -305,10 +327,20 @@ public class UserWardrobeManager {
 
             if (WardrobeSettings.isEnabledBossbar()) {
                 //Audience target = BukkitAudiences.create(HMCCosmeticsPlugin.getInstance()).player(player);
-                player.hideBossBar(bossBar);
+                if (bossBar != null) player.hideBossBar(bossBar);
             }
 
-            user.updateCosmetic();
+            user.despawnBalloon();
+            if (player.isOnline()) {
+                teleporting = true;
+                Scheduler.teleport(player, exitLocation, success -> {
+                    teleporting = false;
+                    if (Bukkit.isStopping() || !success || user.isInWardrobe()) return;
+                    user.respawnBackpack();
+                    user.respawnBalloon();
+                    user.updateCosmetic();
+                });
+            }
         };
         run.run();
     }
@@ -316,13 +348,11 @@ public class UserWardrobeManager {
     private void update() {
         final AtomicInteger data = new AtomicInteger();
 
-        BukkitRunnable runnable = new BukkitRunnable() {
-            @Override
-            public void run() {
+        cancelUpdate = Scheduler.repeat(user.getEntity(), cancel -> {
                 Player player = user.getPlayer();
                 if (!active || player == null) {
                     MessagesUtil.sendDebugMessages("WardrobeEnd[user=" + user.getUniqueId() + ",reason=Active is false]");
-                    this.cancel();
+                    cancel.run();
                     return;
                 }
                 MessagesUtil.sendDebugMessages("WardrobeUpdate[user=" + user.getUniqueId() + ",status=" + getWardrobeStatus() + "]");
@@ -330,7 +360,7 @@ public class UserWardrobeManager {
                 List<Player> outsideViewers = HMCCPacketManager.getViewers(viewingLocation);
                 outsideViewers.remove(player);
 
-                Location location = npcLocation;
+                Location location = npcLocation.clone();
                 int yaw = data.get();
                 location.setYaw(yaw);
 
@@ -357,7 +387,7 @@ public class UserWardrobeManager {
                 if (user.hasCosmeticInSlot(CosmeticSlot.BALLOON) && user.isBalloonSpawned()) {
                     // The two lines below broke, solved by listening to PlayerCosmeticPostEquipEvent
                     //PacketManager.sendTeleportPacket(user.getBalloonManager().getPufferfishBalloonId(), npcLocation.add(Settings.getBalloonOffset()), false, viewer);
-                    //user.getBalloonManager().getModelEntity().teleport(npcLocation.add(Settings.getBalloonOffset()));
+                    //user.getBalloonManager().setLocation(npcLocation.add(Settings.getBalloonOffset()));
                     user.getBalloonManager().sendRemoveLeashPacket(outsideViewers);
                     if (user.getBalloonManager().getBalloonType() != UserBalloonManager.BalloonType.MODELENGINE) {
                         HMCCPacketManager.sendEntityDestroyPacket(user.getBalloonManager().getModelId(), outsideViewers);
@@ -370,10 +400,7 @@ public class UserWardrobeManager {
                 } else {
                     HMCCPacketManager.equipmentSlotUpdate(user.getPlayer(), true, viewer); // Optifine dumbassery
                 }
-            }
-        };
-
-        runnable.runTaskTimer(HMCCosmeticsPlugin.getInstance(), 0, 2);
+        }, 1, 2);
     }
 
     public enum WardrobeStatus {

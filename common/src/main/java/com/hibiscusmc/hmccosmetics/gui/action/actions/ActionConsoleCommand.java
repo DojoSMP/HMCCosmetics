@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.gui.action.actions;
 
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.cosmetic.CosmeticHolder;
 import com.hibiscusmc.hmccosmetics.gui.action.Action;
@@ -19,7 +20,8 @@ public class ActionConsoleCommand extends Action {
     public void run(Player viewer, CosmeticHolder cosmeticHolder, String raw) {
         // todo: some of these generalizations may require more specific implementations, for example,
         // todo: what if we wanted to execute console commands only for the cosmetic holder?
-        HMCCosmeticsPlugin.getInstance().getServer().dispatchCommand(Bukkit.getConsoleSender(), Hooks.processPlaceholders(viewer, raw));
+        String command = Hooks.processPlaceholders(viewer, raw);
+        Scheduler.global(() -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command));
     }
 
     @Override

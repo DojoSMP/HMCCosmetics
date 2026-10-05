@@ -11,6 +11,7 @@ lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 commons-io = { module = "commons-io:commons-io", version = "2.17.0" } # The version Minecraft 1.21.4 ships
 
 hibiscuscommons = { module = "me.lojosho:HibiscusCommons", version = "0.9.3" }
+universal-scheduler = { module = "com.github.Anon8281:UniversalScheduler", version = "0.1.7" }
 triumph-gui = { module = "dev.triumphteam:triumph-gui", version = "3.2.0-SNAPSHOT" }
 
 betterhud-standard = { module = "io.github.toxicity188:BetterHud-standard-api", version.ref = "betterhud" }

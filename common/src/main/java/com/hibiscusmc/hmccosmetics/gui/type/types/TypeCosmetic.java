@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.gui.type.types;
 
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.config.Settings;
 import com.hibiscusmc.hmccosmetics.cosmetic.Cosmetic;
@@ -127,7 +128,7 @@ public class TypeCosmetic extends Type {
         Runnable run = () -> cosmeticHolder.updateCosmetic(cosmetic.getSlot());
         if (cosmetic instanceof CosmeticArmorType) {
             if (((CosmeticArmorType) cosmetic).getEquipSlot().equals(EquipmentSlot.OFF_HAND)) {
-                Bukkit.getScheduler().runTaskLater(HMCCosmeticsPlugin.getInstance(), run, 1);
+                Scheduler.later(viewer, run, 1);
             }
         }
         run.run();
@@ -160,7 +161,7 @@ public class TypeCosmetic extends Type {
 
         if (cosmeticHolder.hasCosmeticInSlot(cosmetic) && !config.node("equipped-item").virtual()) {
             MessagesUtil.sendDebugMessages("GUI Equipped Item");
-            ConfigurationNode equippedItem = config.node("equipped-item");
+            ConfigurationNode equippedItem = config.node("equipped-item").copy();
 
             // If not defined, use the item defined in the regular item
             try {
@@ -182,7 +183,7 @@ public class TypeCosmetic extends Type {
 
         if (!cosmeticHolder.canEquipCosmetic(cosmetic, true) && !config.node("locked-item").virtual()) {
             MessagesUtil.sendDebugMessages("GUI Locked Item");
-            ConfigurationNode lockedItem = config.node("locked-item");
+            ConfigurationNode lockedItem = config.node("locked-item").copy();
 
             // If not defined, use the item defined in the regular item
             try {

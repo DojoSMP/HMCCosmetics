@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.config;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.config.section.SlotOptionConfig;
 import com.hibiscusmc.hmccosmetics.gui.type.ShadingType;
@@ -81,108 +82,108 @@ public class Settings {
     private static final String VULCAN_IGNORE_CHECKS_IN_WARDROBE_PATH = "exempt-checks-in-wardrobe";
 
     @Getter
-    private static String defaultMenu;
+    private static volatile String defaultMenu;
     @Getter
-    private static String dyeMenuName;
+    private static volatile String dyeMenuName;
     @Getter
-    private static int dyeMenuInputSlot;
+    private static volatile int dyeMenuInputSlot;
     @Getter
-    private static int dyeMenuOutputSlot;
+    private static volatile int dyeMenuOutputSlot;
     @Getter
-    private static int configVersion;
+    private static volatile int configVersion;
     @Getter
-    private static boolean debugMode;
+    private static volatile boolean debugMode;
     @Getter
-    private static boolean unapplyOnDeath;
+    private static volatile boolean unapplyOnDeath;
     @Getter
-    private static boolean forcePermissionJoin;
+    private static volatile boolean forcePermissionJoin;
     @Getter
-    private static boolean forceShowOnJoin;
+    private static volatile boolean forceShowOnJoin;
     @Getter
-    private static boolean itemProcessingDisplayName;
+    private static volatile boolean itemProcessingDisplayName;
     @Getter
-    private static boolean itemProcessingLore;
+    private static volatile boolean itemProcessingLore;
     @Getter
-    private static boolean itemsAdderChangeReload;
+    private static volatile boolean itemsAdderChangeReload;
     @Getter
-    private static boolean nexoChangeReload;
+    private static volatile boolean nexoChangeReload;
     @Getter
-    private static boolean worldGuardMoveCheck;
-    private static final HashMap<EquipmentSlot, SlotOptionConfig> slotOptions = new HashMap<>();
+    private static volatile boolean worldGuardMoveCheck;
+    private static final ConcurrentHashMap<EquipmentSlot, SlotOptionConfig> slotOptions = new ConcurrentHashMap<>();
     @Getter
-    private static boolean destroyLooseCosmetics;
+    private static volatile boolean destroyLooseCosmetics;
     @Getter
-    private static boolean preventOffhandSwapping;
+    private static volatile boolean preventOffhandSwapping;
     @Getter
-    private static boolean backpackForceRidingEnabled;
+    private static volatile boolean backpackForceRidingEnabled;
     @Getter
-    private static boolean backpackInterceptPassengerPacket;
+    private static volatile boolean backpackInterceptPassengerPacket;
     @Getter
-    private static boolean disabledGamemodesEnabled;
+    private static volatile boolean disabledGamemodesEnabled;
     @Getter
-    private static boolean balloonHeadForward;
+    private static volatile boolean balloonHeadForward;
     @Getter
-    private static boolean balloonDefaultShowLead;
+    private static volatile boolean balloonDefaultShowLead;
     @Getter
-    private static boolean backpackPreventDarkness;
+    private static volatile boolean backpackPreventDarkness;
     @Getter
-    private static boolean preferHMCColorDyeMenu;
+    private static volatile boolean preferHMCColorDyeMenu;
     @Getter
-    private static List<String> disabledGamemodes;
+    private static volatile List<String> disabledGamemodes;
     @Getter
-    private static List<String> disabledWorlds;
+    private static volatile List<String> disabledWorlds;
     @Getter
-    private static int viewDistance;
+    private static volatile int viewDistance;
     @Getter
-    private static int tickPeriod;
+    private static volatile int tickPeriod;
     @Getter
-    private static Long defaultMenuCooldown;
+    private static volatile Long defaultMenuCooldown;
     @Getter
-    private static boolean menuClickCooldown;
+    private static volatile boolean menuClickCooldown;
     @Getter
-    private static Vector balloonOffset;
+    private static volatile Vector balloonOffset;
     @Getter
-    private static String cosmeticEquipClickType;
+    private static volatile String cosmeticEquipClickType;
     @Getter
-    private static String cosmeticUnEquipClickType;
+    private static volatile String cosmeticUnEquipClickType;
     @Getter
-    private static String cosmeticDyeClickType;
+    private static volatile String cosmeticDyeClickType;
     @Getter
-    private static boolean defaultShading;
+    private static volatile boolean defaultShading;
     @Getter
-    private static ShadingType shadingType;
+    private static volatile ShadingType shadingType;
     @Getter
-    private static String equippableCosmeticReference;
+    private static volatile String equippableCosmeticReference;
     @Getter
-    private static String equippedCosmeticReference;
+    private static volatile String equippedCosmeticReference;
     @Getter
-    private static String lockedCosmeticReference;
+    private static volatile String lockedCosmeticReference;
     @Getter
-    private static String firstRowShift;
+    private static volatile String firstRowShift;
     @Getter
-    private static String sequentRowShift;
+    private static volatile String sequentRowShift;
     @Getter
-    private static String individualColumnShift;
+    private static volatile String individualColumnShift;
     @Getter
-    private static String background;
+    private static volatile String background;
     @Getter
-    private static String clearBackground;
+    private static volatile String clearBackground;
     @Getter
-    private static String equippedCosmeticColor;
+    private static volatile String equippedCosmeticColor;
     @Getter
-    private static String equipableCosmeticColor;
+    private static volatile String equipableCosmeticColor;
     @Getter
-    private static String lockedCosmeticColor;
+    private static volatile String lockedCosmeticColor;
     @Getter @Setter
-    private static boolean allPlayersHidden;
+    private static volatile boolean allPlayersHidden;
     @Getter
-    private static boolean wardrobeHideHud;
+    private static volatile boolean wardrobeHideHud;
     @Getter
-    private static boolean vulcanIgnoreViolationInWardrobe;
+    private static volatile boolean vulcanIgnoreViolationInWardrobe;
     @Getter
-    private static boolean dyeMenuEnabled;
+    private static volatile boolean dyeMenuEnabled;
     @Getter
-    private static PlayerSearchManager.SearchEngine engine;
+    private static volatile PlayerSearchManager.SearchEngine engine;
 
     public static void load(ConfigurationNode source) {
 

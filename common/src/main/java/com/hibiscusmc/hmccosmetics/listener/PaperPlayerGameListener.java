@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.listener;
 
+import com.hibiscusmc.hmccosmetics.util.Scheduler;
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.cosmetic.CosmeticSlot;
@@ -39,7 +40,7 @@ public class PaperPlayerGameListener implements Listener {
         // after an armor change can overwrite the item being created or moved by the client.
         if (player.getGameMode() == GameMode.CREATIVE) return;
 
-        Bukkit.getScheduler().runTaskLater(HMCCosmeticsPlugin.getInstance(), player::updateInventory, 2);
+        Scheduler.later(player, player::updateInventory, 2);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

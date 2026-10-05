@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.gui.action;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.hibiscusmc.hmccosmetics.cosmetic.CosmeticHolder;
 import com.hibiscusmc.hmccosmetics.gui.action.actions.*;
 import com.hibiscusmc.hmccosmetics.user.CosmeticUser;
@@ -15,7 +16,7 @@ import java.util.logging.Level;
 @SuppressWarnings("unused")
 public class Actions {
 
-    private static final HashMap<String, Action> actions = new HashMap<>();
+    private static final ConcurrentHashMap<String, Action> actions = new ConcurrentHashMap<>();
 
     // [ID]
     private static final ActionMessage ACTION_MESSAGE = new ActionMessage();

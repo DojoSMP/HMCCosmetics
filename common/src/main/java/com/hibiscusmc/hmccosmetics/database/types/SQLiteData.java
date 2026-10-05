@@ -47,7 +47,7 @@ public class SQLiteData extends SQLData {
     @Override
     @SuppressWarnings("resource")
     public void clear(UUID uniqueId) {
-        Bukkit.getScheduler().runTaskAsynchronously(HMCCosmeticsPlugin.getInstance(), () -> {
+        worker.execute( () -> {
             try (PreparedStatement preparedSt = preparedStatement("DELETE FROM COSMETICDATABASE WHERE UUID=?;")){
                 preparedSt.setString(1, uniqueId.toString());
                 preparedSt.executeUpdate();
@@ -55,6 +55,15 @@ public class SQLiteData extends SQLData {
                 e.printStackTrace();
             }
         });
+    }
+
+    @Override
+    protected void closeConnection() {
+        try {
+            if (connection != null) connection.close();
+        } catch (SQLException e) {
+            throw new IllegalStateException("Unable to close SQLite connection", e);
+        }
     }
 
     private void openConnection() throws SQLException {

@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.util;
 
+import java.util.concurrent.ConcurrentHashMap;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import com.hibiscusmc.hmccosmetics.config.Settings;
 import com.hibiscusmc.hmccosmetics.user.CosmeticUser;
@@ -21,8 +22,8 @@ import java.util.logging.Level;
 
 public class MessagesUtil {
 
-    private static String prefix;
-    private static final HashMap<String, String> MESSAGES = new HashMap<>();
+    private static volatile String prefix;
+    private static final ConcurrentHashMap<String, String> MESSAGES = new ConcurrentHashMap<>();
 
     public static void setup(@NotNull ConfigurationNode config) {
         MESSAGES.clear();
@@ -40,6 +41,11 @@ public class MessagesUtil {
     }
 
     public static void sendMessage(Player player, String key) {
+        if (player == null) return;
+        if (!Scheduler.owns(player)) {
+            Scheduler.run(player, () -> sendMessage(player, key));
+            return;
+        }
         Component finalMessage = processString(player, key);
         if (finalMessage == null) return;
 
@@ -47,6 +53,10 @@ public class MessagesUtil {
     }
 
     public static void sendMessage(CommandSender sender, String key) {
+        if (sender instanceof Player player && !Scheduler.owns(player)) {
+            Scheduler.run(player, () -> sendMessage(sender, key));
+            return;
+        }
         Component finalMessage = processString(null, key);
         if (finalMessage == null) return;
 
@@ -54,6 +64,10 @@ public class MessagesUtil {
     }
 
     public static void sendMessage(CommandSender sender, String key, TagResolver placeholder) {
+        if (sender instanceof Player player && !Scheduler.owns(player)) {
+            Scheduler.run(player, () -> sendMessage(sender, key, placeholder));
+            return;
+        }
         Component finalMessage = processString(sender instanceof Player ? (Player) sender : null, key, placeholder);
         if (finalMessage == null) return;
 
@@ -61,6 +75,11 @@ public class MessagesUtil {
     }
 
     public static void sendMessage(Player player, String key, TagResolver placeholder) {
+        if (player == null) return;
+        if (!Scheduler.owns(player)) {
+            Scheduler.run(player, () -> sendMessage(player, key, placeholder));
+            return;
+        }
         Component finalMessage = processString(player, key, placeholder);
         if (finalMessage == null) return;
 
@@ -68,6 +87,11 @@ public class MessagesUtil {
     }
 
     public static void sendMessageNoKey(Player player, String message) {
+        if (player == null) return;
+        if (!Scheduler.owns(player)) {
+            Scheduler.run(player, () -> sendMessageNoKey(player, message));
+            return;
+        }
         Component finalMessage = processStringNoKey(player, message);
         if (finalMessage == null) return;
 
@@ -75,6 +99,11 @@ public class MessagesUtil {
     }
 
     public static void sendActionBar(Player player, String key) {
+        if (player == null) return;
+        if (!Scheduler.owns(player)) {
+            Scheduler.run(player, () -> sendActionBar(player, key));
+            return;
+        }
         Component finalMessage = processString(player, key);
         if (finalMessage == null) return;
         player.sendActionBar(finalMessage);
@@ -85,6 +114,11 @@ public class MessagesUtil {
     }
 
     public static void sendTitle(Player player, String message, int fadein, int stay, int fadeout) {
+        if (player == null) return;
+        if (!Scheduler.owns(player)) {
+            Scheduler.run(player, () -> sendTitle(player, message, fadein, stay, fadeout));
+            return;
+        }
         Title.Times times = Title.Times.times(Duration.ofMillis(fadein), Duration.ofMillis(stay), Duration.ofMillis(fadeout));
         Title title = Title.title(processStringNoKey(player, message), Component.empty(), times);
 

@@ -1,5 +1,6 @@
 package com.hibiscusmc.hmccosmetics.util.search;
 
+import me.lojosho.hibiscuscommons.HibiscusCommonsPlugin;
 import com.hibiscusmc.hmccosmetics.HMCCosmeticsPlugin;
 import lombok.Getter;
 import org.bukkit.Location;
@@ -17,6 +18,11 @@ public class PlayerSearchManager {
 
     public PlayerSearchManager(@NotNull SearchEngine engine, @NotNull HMCCosmeticsPlugin plugin) {
         this.plugin = plugin;
+
+        if (HibiscusCommonsPlugin.isOnFolia()) {
+            this.engine = new SnapshotPlayerSearchEngine(plugin);
+            return;
+        }
 
         // Choose Octree if set, otherwise just default to Bukkit
         switch (engine) {
