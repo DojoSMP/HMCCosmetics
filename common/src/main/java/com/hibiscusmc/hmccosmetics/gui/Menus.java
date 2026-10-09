@@ -95,7 +95,9 @@ public class Menus {
 
         // Recursive file lookup
         try (Stream<Path> walkStream = Files.walk(menusFolder.toPath())) {
-            walkStream.filter(p -> p.toFile().isFile()).forEach(child -> {
+            walkStream.filter(p -> p.toFile().isFile())
+                    .filter(child -> !child.getFileName().toString().startsWith("_"))
+                    .forEach(child -> {
                 if (child.toString().endsWith("yml") || child.toString().endsWith("yaml")) {
                     if (FILES_TO_IGNORE.contains(child.getFileName().toString())) return;
                     MessagesUtil.sendDebugMessages("Scanning " + child);

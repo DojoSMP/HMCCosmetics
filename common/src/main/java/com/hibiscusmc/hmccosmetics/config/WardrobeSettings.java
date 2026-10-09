@@ -177,7 +177,9 @@ public class WardrobeSettings {
         wardrobes.clear();
         File wardrobeFolder = new File(HMCCosmeticsPlugin.getInstance().getDataFolder() + "/wardrobes");
         try (Stream<Path> walkStream = Files.walk(wardrobeFolder.toPath())) {
-            walkStream.filter(p -> p.toFile().isFile()).forEach(child -> {
+            walkStream.filter(p -> p.toFile().isFile())
+                    .filter(child -> !child.getFileName().toString().startsWith("_"))
+                    .forEach(child -> {
                 if (child.toString().contains(".yml") || child.toString().contains(".yaml")) {
                     MessagesUtil.sendDebugMessages("Scanning " + child);
                     // Loads file

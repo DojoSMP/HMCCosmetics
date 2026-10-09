@@ -74,7 +74,9 @@ public class Cosmetics {
         if (directoryListing == null) return;
 
         try (Stream<Path> walkStream = Files.walk(cosmeticFolder.toPath())) {
-            walkStream.filter(p -> p.toFile().isFile()).forEach(child -> {
+            walkStream.filter(p -> p.toFile().isFile())
+                    .filter(child -> !child.getFileName().toString().startsWith("_"))
+                    .forEach(child -> {
                 if (child.toString().contains(".yml") || child.toString().contains(".yaml")) {
                     MessagesUtil.sendDebugMessages("Scanning " + child);
                     // Loads file
