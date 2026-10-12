@@ -80,10 +80,29 @@ public class CosmeticPacketInterface implements PacketInterface {
     public @NotNull PacketAction writePassengerContent(@NotNull Player player, @NotNull PassengerWrapper wrapper) {
         if (!Settings.isBackpackInterceptPassengerPacket()) return PacketAction.NOTHING;
         CosmeticUser viewer = CosmeticUsers.getUser(player);
-        CosmeticUser owner = CosmeticUsers.getUser(wrapper.getOwner());
-        if (viewer == null || viewer.isInWardrobe() || owner == null || owner.isInWardrobe()) return PacketAction.NOTHING;
+        if (viewer == null || viewer.isInWardrobe()) return PacketAction.NOTHING;
+
+        int ownerId = wrapper.getOwner();
+        Optional<CosmeticUser> optionalCosmeticUser = CosmeticUsers.values().stream()
+                .filter(user -> user.getPlayer() != null)
+                .filter(user -> ownerId == user.getPlayer().getEntityId())
+                .findFirst();
+        if (optionalCosmeticUser.isEmpty()) return PacketAction.NOTHING;
+
+        CosmeticUser owner = optionalCosmeticUser.get();
+        if (owner.isInWardrobe()) return PacketAction.NOTHING;
+
+        Cosmetic backpackCosmetic = owner.getCosmetic(CosmeticSlot.BACKPACK);
+        if (backpackCosmetic == null) return PacketAction.NOTHING;
+        if (!(backpackCosmetic instanceof CosmeticBackpackType cosmeticBackpackType)) return PacketAction.NOTHING;
+
+        if (owner.getUniqueId().equals(viewer.getUniqueId())) {
+            if (cosmeticBackpackType.isFirstPersonCompadible()) return PacketAction.NOTHING;
+        }
+
         int mount = owner.getPacketBackpackMount();
         if (mount == -1 || (owner.getUniqueId().equals(viewer.getUniqueId()) && owner.isPacketFirstPersonBackpack())) return PacketAction.NOTHING;
+
         List<Integer> passengers = new ArrayList<>(wrapper.getPassengers());
         if (passengers.contains(mount)) return PacketAction.NOTHING;
         passengers.add(mount);
